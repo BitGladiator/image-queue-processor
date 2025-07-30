@@ -9,15 +9,15 @@ const connection = new IORedis({
 
 const worker = new Worker('image-processing', async job => {
     const { imagePath, filter } = job.data;
-    // Output file path
     const outputPath = path.join(__dirname, '../flask/results', `${job.id}_output.jpg`);
-    console.log(`Processing job ${job.id} with filter: ${filter}`);
-    
+
     return new Promise((resolve, reject) => {
-        const cppCommand = `./cpp/processor "${imagePath}" "${outputPath}" "${filter}"`;
+        const processorPath = path.join(__dirname, '../cpp/build/processor');
+        const cppCommand = `"${processorPath}" "${imagePath}" "${outputPath}" "${filter}"`;
+
         exec(cppCommand, (error, stdout, stderr) => {
             if (error) {
-                console.error(`Job ${job.id} failed: ${stderr}`);
+                console.error(`Job ${job.id} failed: ${stderr || error.message}`);
                 return reject(error);
             }
             console.log(`Job ${job.id} completed: ${outputPath}`);

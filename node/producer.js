@@ -30,8 +30,6 @@ app.get('/job/:id',async(req,res)=>{
     const result = await job.returnvalue || null;
     const failedReason = await job.failedReason || null;
     res.json({id,state,result,failedReason});
-    
-
 })
 app.listen(3000, () => {
     console.log('Producer listening on port 3000');

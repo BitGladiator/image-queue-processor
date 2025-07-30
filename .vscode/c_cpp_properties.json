@@ -1,0 +1,24 @@
+{
+    "configurations": [
+      {
+        "name": "Mac",
+        "includePath": [
+          "${workspaceFolder}/**",
+          "/opt/homebrew/include",                     // Brew default path (Apple Silicon)
+          "/opt/homebrew/opt/opencv/include",         // OpenCV headers
+          "/opt/homebrew/opt/opencv/include/opencv4"  // OpenCV 4 actual headers
+        ],
+        "defines": [],
+        "macFrameworkPath": [
+          "/System/Library/Frameworks",
+          "/Library/Frameworks"
+        ],
+        "compilerPath": "/usr/bin/clang++",
+        "cStandard": "c17",
+        "cppStandard": "c++17",
+        "intelliSenseMode": "macos-clang-arm64"
+      }
+    ],
+    "version": 4
+  }
+  
