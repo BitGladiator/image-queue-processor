@@ -1,10 +1,131 @@
 <!DOCTYPE html>
-<html>
-<head><meta http-equiv="refresh" content="2"><title>Job Status</title></head>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="2">
+    <title>Job Status | Image Processor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 40px;
+            text-align: center;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .status-container {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            margin: 10px 0;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-processing {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .status-completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-failed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .refresh-info {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin: 20px 0;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin: 20px 0;
+            height: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #3498db;
+            width: {{ progress|default(0) }}%;
+            transition: width 0.3s ease;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #5a6268;
+        }
+        .job-id {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: #495057;
+        }
+    </style>
+</head>
 <body>
-  <h2>Job {{ job_id }}</h2>
-  <p>Status: <strong>{{ state }}</strong></p>
-  <p>This page refreshes every 2 seconds…</p>
-  <a href="/">Back</a>
+    <div class="container">
+        <h2>Job Status</h2>
+        <p>Job ID: <span class="job-id">{{ job_id }}</span></p>
+        
+        <div class="status-container">
+            {% if state == 'pending' %}
+                <div class="status-badge status-pending">PENDING</div>
+                <p>Your job is in the queue</p>
+            {% elif state == 'processing' %}
+                <div class="status-badge status-processing">PROCESSING</div>
+                <p>Your image is being processed</p>
+                <div class="progress-container">
+                    <div class="progress-bar"></div>
+                </div>
+            {% elif state == 'completed' %}
+                <div class="status-badge status-completed">COMPLETED</div>
+                <p>Processing finished successfully!</p>
+            {% elif state == 'failed' %}
+                <div class="status-badge status-failed">✗ FAILED</div>
+                <p>There was an error processing your image</p>
+            {% endif %}
+        </div>
+        
+        <div class="refresh-info">
+            Page refreshes automatically every 2 seconds...
+        </div>
+        
+        <a href="/" class="btn">Back to Home</a>
+    </div>
 </body>
 </html>

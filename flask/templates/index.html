@@ -1,19 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Image Processor</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processor | Upload</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 40px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-box {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .upload-box:hover {
+            border-color: #3498db;
+            background-color: #f8fafc;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        select, .file-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: #fff;
+        }
+        .file-input {
+            box-sizing: border-box;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            color: #555;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .file-input-label:hover {
+            background: #e9ecef;
+        }
+        .file-name {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload Image for Processing</h1>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="image" required><br><br>
-        <label for="filter">Choose a filter:</label>
-        <select name="filter">
-            <option value="grayscale">Grayscale</option>
-            <option value="blur">Blur</option>
-            <option value="edge">Edge Detection</option>
-        </select><br><br>
-        <button type="submit">Upload & Process</button>
-    </form>
+    <div class="container">
+        <h1>Image Processing Tool</h1>
+        
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+            <div class="upload-box">
+                <label for="image" class="file-input-label">
+                    Choose an Image
+                    <input type="file" id="image" name="image" accept="image/*" required 
+                           style="display: none;" onchange="updateFileName(this)">
+                </label>
+                <div id="file-name" class="file-name">No file selected</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="filter">Processing Filter</label>
+                <select id="filter" name="filter" class="form-control">
+                    <option value="grayscale">Grayscale Conversion</option>
+                    <option value="blur">Gaussian Blur</option>
+                    <option value="edge">Edge Detection</option>
+                    
+                </select>
+            </div>
+            
+            <button type="submit" class="btn">Process Image</button>
+        </form>
+    </div>
+
+    <script>
+        function updateFileName(input) {
+            const fileNameDisplay = document.getElementById('file-name');
+            if (input.files.length > 0) {
+                fileNameDisplay.textContent = input.files[0].name;
+            } else {
+                fileNameDisplay.textContent = 'No file selected';
+            }
+        }
+    </script>
 </body>
 </html>

@@ -1,0 +1,8 @@
+node_modules
+__pycache__
+*.pyc
+flask/uploads
+flask/results
+cpp/build
+cpp/processor
+.DS_Store
