@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Processor</title>
+</head>
+<body>
+    <h1>Upload Image for Processing</h1>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" required><br><br>
+        <label for="filter">Choose a filter:</label>
+        <select name="filter">
+            <option value="grayscale">Grayscale</option>
+            <option value="blur">Blur</option>
+            <option value="edge">Edge Detection</option>
+        </select><br><br>
+        <button type="submit">Upload & Process</button>
+    </form>
+</body>
+</html>
