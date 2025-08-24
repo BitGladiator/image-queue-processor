@@ -1,19 +1,347 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Image Processor</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processor | Premium</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 60%);
+            transform: rotate(30deg);
+            pointer-events: none;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        h1::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(to right, #fdbb2d, #b21f1f);
+            margin: 10px auto 0;
+            border-radius: 3px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .file-input-container {
+            position: relative;
+            height: 180px;
+            border: 2px dashed rgba(255, 255, 255, 0.4);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .file-input-container:hover {
+            border-color: rgba(253, 187, 45, 0.8);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .file-input-container i {
+            font-size: 50px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .file-input-container:hover i {
+            color: #fdbb2d;
+            transform: translateY(-5px);
+        }
+        
+        .file-input-container p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .file-input-container span {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+        }
+        
+        #file-name {
+            margin-top: 10px;
+            color: #fdbb2d;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .select-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .custom-select {
+            position: relative;
+        }
+        
+        select {
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            appearance: none;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        select:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 2px rgba(253, 187, 45, 0.5);
+        }
+        
+        .custom-select::after {
+            content: '\f078';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.7);
+            pointer-events: none;
+        }
+        
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(to right, #fdbb2d, #b21f1f);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(178, 31, 31, 0.4);
+            letter-spacing: 0.5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(178, 31, 31, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 10px rgba(178, 31, 31, 0.4);
+        }
+        
+        .loading-bar {
+            height: 4px;
+            width: 0%;
+            background: linear-gradient(to right, #fdbb2d, #b21f1f);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            border-radius: 0 0 20px 20px;
+            transition: width 0.4s ease;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .file-input-container {
+                height: 150px;
+            }
+            
+            .file-input-container i {
+                font-size: 40px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload Image for Processing</h1>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="image" required><br><br>
-        <label for="filter">Choose a filter:</label>
-        <select name="filter">
-            <option value="grayscale">Grayscale</option>
-            <option value="blur">Blur</option>
-            <option value="edge">Edge Detection</option>
-        </select><br><br>
-        <button type="submit">Upload & Process</button>
-    </form>
+    <div class="container">
+        <h1>Upload Image for Processing</h1>
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <div class="file-input-container">
+                    <input type="file" name="image" id="image" required accept="image/*">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop or click to upload</p>
+                    <span>Supports JPG, PNG, GIF</span>
+                    <div id="file-name"></div>
+                </div>
+            </div>
+            
+            <div class="select-group">
+                <label for="filter">Choose a filter:</label>
+                <div class="custom-select">
+                    <select name="filter" id="filter">
+                        <option value="grayscale">Grayscale</option>
+                        <option value="blur">Blur</option>
+                        <option value="edge">Edge Detection</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button type="submit" id="submit-btn">Upload & Process</button>
+        </form>
+        <div class="loading-bar" id="loading-bar"></div>
+    </div>
+
+    <script>
+        // File name display
+        const fileInput = document.getElementById('image');
+        const fileName = document.getElementById('file-name');
+        const submitBtn = document.getElementById('submit-btn');
+        const loadingBar = document.getElementById('loading-bar');
+        
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                fileName.textContent = this.files[0].name;
+            } else {
+                fileName.textContent = '';
+            }
+        });
+        
+        // Form submission animation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading animation
+            submitBtn.textContent = 'Processing...';
+            submitBtn.disabled = true;
+            
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    // Actually submit the form after animation
+                    form.submit();
+                } else {
+                    width += 5;
+                    loadingBar.style.width = width + '%';
+                }
+            }, 50);
+        });
+        
+        // Drag and drop highlight
+        const dropArea = document.querySelector('.file-input-container');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.style.borderColor = '#fdbb2d';
+            dropArea.style.background = 'rgba(255, 255, 255, 0.1)';
+        }
+        
+        function unhighlight() {
+            dropArea.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+            dropArea.style.background = 'transparent';
+        }
+        
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            
+            if (files.length > 0) {
+                fileName.textContent = files[0].name;
+            }
+        }
+    </script>
 </body>
 </html>
