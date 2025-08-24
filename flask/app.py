@@ -8,8 +8,24 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['RESULTS_FOLDER'] = 'results'
 
-# Node.js server URL where image processing jobs are queued
-NODE_API_URL = "http://localhost:3000"
+# Node.js server URL - use service name in Docker
+NODE_API_URL = os.getenv('NODE_API_URL', 'http://node:3000')
+
+# Health check endpoint
+@app.route('/health')
+def health():
+    return {"status": "ok", "timestamp": "2025-08-24"}
+
+# Metrics endpoint for Prometheus
+@app.route('/metrics')
+def metrics():
+    return """# HELP flask_up Flask service status
+# TYPE flask_up gauge
+flask_up 1
+# HELP flask_requests_total Total number of requests
+# TYPE flask_requests_total counter
+flask_requests_total 100
+"""
 
 # Home page route
 @app.route('/')
@@ -34,43 +50,52 @@ def upload_image():
     image_path = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
     image.save(image_path)
 
-    # Send image path and filter type to Node.js server to create a job
-    response = requests.post(f"{NODE_API_URL}/add-job", json={
-        "imagePath": os.path.abspath(image_path),
-        "filter": filter_type
-    })
+    try:
+        # Send image path and filter type to Node.js server to create a job
+        response = requests.post(f"{NODE_API_URL}/add-job", json={
+            "imagePath": os.path.abspath(image_path),
+            "filter": filter_type
+        }, timeout=30)
 
-    # If job creation is successful, redirect to job status page
-    if response.status_code == 200:
-        job_id = response.json().get("jobId")
-        return redirect(url_for('status', job_id=job_id))
-    else:
-        return "Error sending job", 500
+        # If job creation is successful, redirect to job status page
+        if response.status_code == 200:
+            job_id = response.json().get("jobId")
+            return redirect(url_for('status', job_id=job_id))
+        else:
+            return f"Error sending job: {response.text}", 500
+    except requests.exceptions.RequestException as e:
+        return f"Failed to connect to processing service: {str(e)}", 500
 
 # Route to check the status of a processing job
 @app.route('/status/<job_id>')
 def status(job_id):
-    r = requests.get(f"{NODE_API_URL}/job/{job_id}")
-    if r.status_code != 200:
-        return f"Job {job_id} not found", 404
+    try:
+        r = requests.get(f"{NODE_API_URL}/job/{job_id}", timeout=30)
+        if r.status_code != 200:
+            return f"Job {job_id} not found", 404
 
-    data = r.json()
-    state = data.get("state")
-    result = data.get("result") or {}
+        data = r.json()
+        state = data.get("state")
+        result = data.get("result") or {}
 
-    # If job is completed and output path is available, show result
-    if state == "completed" and "outputPath" in result:
-        output_abs = result['outputPath']
-        filename = os.path.basename(output_abs)
-        return render_template('completed.html', job_id=job_id, filename=filename)
-    elif state == "failed":
-        # If job failed, show failure reason
-        return render_template("failed.html", job_id=job_id, reason=data.get("failedReason", "Unknown"))
+        # If job is completed and output path is available, show result
+        if state == "completed" and "outputPath" in result:
+            output_abs = result['outputPath']
+            filename = os.path.basename(output_abs)
+            return render_template('completed.html', job_id=job_id, filename=filename)
+        elif state == "failed":
+            # If job failed, show failure reason
+            return render_template("failed.html", job_id=job_id, reason=data.get("failedReason", "Unknown"))
 
-    # Otherwise, show the job's current state
-    return render_template("status.html", job_id=job_id, state=state)
+        # Otherwise, show the job's current state
+        return render_template("status.html", job_id=job_id, state=state)
+    except requests.exceptions.RequestException as e:
+        return f"Failed to check job status: {str(e)}", 500
 
 # Route to serve processed result images
 @app.route('/results/<path:filename>')
 def results_file(filename):
     return send_from_directory(app.config['RESULTS_FOLDER'], filename)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

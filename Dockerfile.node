@@ -2,20 +2,35 @@ FROM node:18
 
 WORKDIR /app
 
-# Install dependencies
+# Install OpenCV deps, curl for health checks, and build tools first
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    pkg-config \
+    libopencv-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js dependencies
 COPY node/package.json node/package-lock.json* ./
 RUN npm install
 
-# Copy code
+# Copy Node.js code
 COPY node/ .
 
-# Install OpenCV deps and build C++ processor
-RUN apt-get update && apt-get install -y build-essential cmake pkg-config libopencv-dev
-
-COPY cpp/ /app/cpp/
+# Copy and build C++ processor
+COPY cpp/ ./cpp/
 WORKDIR /app/cpp
-RUN mkdir build && cd build && cmake .. && cmake --build . --config Release
+RUN mkdir -p build && cd build && cmake .. && make
+
+# Verify the processor was built
+RUN ls -la /app/cpp/build/ && file /app/cpp/build/processor
+
+# Create necessary directories
+RUN mkdir -p /app/flask/results /app/flask/uploads
 
 WORKDIR /app
 
 EXPOSE 3000
+
+CMD ["node", "producer.js"]

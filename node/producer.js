@@ -3,9 +3,14 @@ const cors = require('cors');
 const { Queue, Job, QueueEvents } = require('bullmq');
 const IORedis = require('ioredis');
 
-// Redis connection setup
+// Redis connection setup - use service name in Docker
 const connection = new IORedis({
-    maxRetriesPerRequest: null
+    host: process.env.REDIS_HOST || 'redis',
+    port: process.env.REDIS_PORT || 6379,
+    maxRetriesPerRequest: null,
+    retryDelayOnFailover: 100,
+    enableReadyCheck: false,
+    lazyConnect: true
 });
 
 // Import BullMQ queue instance
@@ -17,6 +22,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint for monitoring
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Route to add a new image processing job to the queue
 app.post('/add-job', async (req, res) => {
     const { imagePath, filter } = req.body;
@@ -26,33 +36,43 @@ app.post('/add-job', async (req, res) => {
         return res.status(400).json({ error: 'Missing imagePath or filter' });
     }
 
-    // Add job to the queue
-    const job = await imageQueue.add('process-image', {
-        imagePath,
-        filter
-    });
+    try {
+        // Add job to the queue
+        const job = await imageQueue.add('process-image', {
+            imagePath,
+            filter
+        });
 
-    // Respond with job ID
-    return res.json({ message: 'Job queued', jobId: job.id });
+        // Respond with job ID
+        return res.json({ message: 'Job queued', jobId: job.id });
+    } catch (error) {
+        console.error('Failed to add job:', error);
+        return res.status(500).json({ error: 'Failed to queue job' });
+    }
 });
 
 // Route to check the status of a specific job
 app.get('/job/:id', async (req, res) => {
     const { id } = req.params;
 
-    // Fetch job by ID
-    const job = await Job.fromId(imageQueue, id);
-    if (!job) {
-        return res.status(404).json({ error: "Job not found" });
+    try {
+        // Fetch job by ID
+        const job = await Job.fromId(imageQueue, id);
+        if (!job) {
+            return res.status(404).json({ error: "Job not found" });
+        }
+
+        // Get job state, result, and failure reason if any
+        const state = await job.getState();
+        const result = await job.returnvalue || null;
+        const failedReason = await job.failedReason || null;
+
+        // Respond with job status information
+        res.json({ id, state, result, failedReason });
+    } catch (error) {
+        console.error('Failed to get job status:', error);
+        res.status(500).json({ error: 'Failed to get job status' });
     }
-
-    // Get job state, result, and failure reason if any
-    const state = await job.getState();
-    const result = await job.returnvalue || null;
-    const failedReason = await job.failedReason || null;
-
-    // Respond with job status information
-    res.json({ id, state, result, failedReason });
 });
 
 // Start the Express server

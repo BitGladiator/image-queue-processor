@@ -1,18 +1,19 @@
 {
-  "name": "node",
+  "name": "image-processor-node",
   "version": "1.0.0",
-  "main": "bull-config.js",
+  "description": "Node.js service for image processing queue management",
+  "main": "producer.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node producer.js",
+    "consumer": "node consumer.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "bullmq": "^5.56.8",
+    "bullmq": "^4.0.0",
     "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "ioredis": "^5.6.1"
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
