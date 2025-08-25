@@ -1,101 +1,176 @@
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
-import os
+from flask import Flask, request, render_template, redirect, url_for, send_from_directory, jsonify
 import requests
+import os
+import uuid
+import time
+import threading
+from datetime import datetime
 
 app = Flask(__name__)
 
-# Folder to store uploaded and processed images
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['RESULTS_FOLDER'] = 'results'
+# Metrics storage
+metrics = {
+    'requests_total': 0,
+    'requests_duration_seconds': [],
+    'active_jobs': 0,
+    'completed_jobs': 0,
+    'failed_jobs': 0,
+    'start_time': time.time()
+}
 
-# Node.js server URL - use service name in Docker
+# Middleware to track metrics
+@app.before_request
+def before_request():
+    request.start_time = time.time()
+    metrics['requests_total'] += 1
+
+@app.after_request
+def after_request(response):
+    if hasattr(request, 'start_time'):
+        duration = time.time() - request.start_time
+        metrics['requests_duration_seconds'].append(duration)
+        # Keep only last 1000 requests
+        if len(metrics['requests_duration_seconds']) > 1000:
+            metrics['requests_duration_seconds'] = metrics['requests_duration_seconds'][-1000:]
+    return response
+
+# Configuration
+UPLOAD_FOLDER = 'uploads'
+RESULTS_FOLDER = 'results'
 NODE_API_URL = os.getenv('NODE_API_URL', 'http://node:3000')
 
-# Health check endpoint
-@app.route('/health')
-def health():
-    return {"status": "ok", "timestamp": "2025-08-24"}
+# Ensure directories exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
-# Metrics endpoint for Prometheus
-@app.route('/metrics')
-def metrics():
-    return """# HELP flask_up Flask service status
-# TYPE flask_up gauge
-flask_up 1
-# HELP flask_requests_total Total number of requests
-# TYPE flask_requests_total counter
-flask_requests_total 100
-"""
-
-# Home page route
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Route to handle image uploads
 @app.route('/upload', methods=['POST'])
 def upload_image():
     if 'image' not in request.files:
-        return "No file uploaded", 400
-
-    # Get the uploaded image and filter choice
-    image = request.files['image']
+        return redirect(url_for('index'))
+    
+    file = request.files['image']
     filter_type = request.form.get('filter', 'grayscale')
-
-    # Create upload and result folders if they don't exist
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['RESULTS_FOLDER'], exist_ok=True)
-
-    # Save uploaded image to the uploads folder
-    image_path = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
-    image.save(image_path)
-
+    
+    if file.filename == '':
+        return redirect(url_for('index'))
+    
+    # Generate unique filename
+    file_extension = file.filename.rsplit('.', 1)[1].lower()
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+    
+    # Save uploaded file
+    file.save(file_path)
+    
+    # Submit job to Node.js queue service
     try:
-        # Send image path and filter type to Node.js server to create a job
-        response = requests.post(f"{NODE_API_URL}/add-job", json={
-            "imagePath": os.path.abspath(image_path),
-            "filter": filter_type
-        }, timeout=30)
-
-        # If job creation is successful, redirect to job status page
+        response = requests.post(f'{NODE_API_URL}/add-job', json={
+            'imagePath': f'/app/uploads/{unique_filename}',
+            'filter': filter_type
+        })
+        
         if response.status_code == 200:
-            job_id = response.json().get("jobId")
+            job_data = response.json()
+            job_id = job_data['jobId']
+            metrics['active_jobs'] += 1
             return redirect(url_for('status', job_id=job_id))
         else:
-            return f"Error sending job: {response.text}", 500
-    except requests.exceptions.RequestException as e:
-        return f"Failed to connect to processing service: {str(e)}", 500
+            metrics['failed_jobs'] += 1
+            return f"Failed to queue job: {response.text}", 500
+            
+    except requests.RequestException as e:
+        metrics['failed_jobs'] += 1
+        return f"Error communicating with processing service: {str(e)}", 500
 
-# Route to check the status of a processing job
 @app.route('/status/<job_id>')
 def status(job_id):
     try:
-        r = requests.get(f"{NODE_API_URL}/job/{job_id}", timeout=30)
-        if r.status_code != 200:
-            return f"Job {job_id} not found", 404
+        response = requests.get(f'{NODE_API_URL}/job/{job_id}')
+        
+        if response.status_code == 200:
+            job_status = response.json()
+            
+            if job_status['state'] == 'completed':
+                metrics['active_jobs'] = max(0, metrics['active_jobs'] - 1)
+                metrics['completed_jobs'] += 1
+                return redirect(url_for('completed', job_id=job_id))
+            elif job_status['state'] == 'failed':
+                metrics['active_jobs'] = max(0, metrics['active_jobs'] - 1)
+                metrics['failed_jobs'] += 1
+                return render_template('failed.html', 
+                                     job_id=job_id, 
+                                     error=job_status.get('failedReason', 'Unknown error'))
+            else:
+                return render_template('status.html', job_id=job_id, status=job_status)
+        else:
+            return f"Failed to get job status: {response.text}", 500
+            
+    except requests.RequestException as e:
+        return f"Error getting job status: {str(e)}", 500
 
-        data = r.json()
-        state = data.get("state")
-        result = data.get("result") or {}
+@app.route('/completed/<job_id>')
+def completed(job_id):
+    # Check if result file exists
+    result_file = f"{job_id}_output.jpg"
+    result_path = os.path.join(RESULTS_FOLDER, result_file)
+    
+    if os.path.exists(result_path):
+        return render_template('completed.html', 
+                             job_id=job_id, 
+                             result_file=result_file)
+    else:
+        return "Result file not found", 404
 
-        # If job is completed and output path is available, show result
-        if state == "completed" and "outputPath" in result:
-            output_abs = result['outputPath']
-            filename = os.path.basename(output_abs)
-            return render_template('completed.html', job_id=job_id, filename=filename)
-        elif state == "failed":
-            # If job failed, show failure reason
-            return render_template("failed.html", job_id=job_id, reason=data.get("failedReason", "Unknown"))
+@app.route('/results/<filename>')
+def download_file(filename):
+    return send_from_directory(RESULTS_FOLDER, filename)
 
-        # Otherwise, show the job's current state
-        return render_template("status.html", job_id=job_id, state=state)
-    except requests.exceptions.RequestException as e:
-        return f"Failed to check job status: {str(e)}", 500
+@app.route('/health')
+def health():
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'uptime': time.time() - metrics['start_time']
+    })
 
-# Route to serve processed result images
-@app.route('/results/<path:filename>')
-def results_file(filename):
-    return send_from_directory(app.config['RESULTS_FOLDER'], filename)
+@app.route('/metrics')
+def prometheus_metrics():
+    """Prometheus metrics endpoint - minimal version without system metrics"""
+    # Calculate average request duration
+    avg_duration = 0
+    if metrics['requests_duration_seconds']:
+        avg_duration = sum(metrics['requests_duration_seconds']) / len(metrics['requests_duration_seconds'])
+    
+    metrics_text = f"""# HELP flask_requests_total Total number of HTTP requests
+# TYPE flask_requests_total counter
+flask_requests_total {metrics['requests_total']}
+
+# HELP flask_request_duration_seconds Average request duration
+# TYPE flask_request_duration_seconds gauge
+flask_request_duration_seconds {avg_duration}
+
+# HELP flask_active_jobs Currently active image processing jobs
+# TYPE flask_active_jobs gauge
+flask_active_jobs {metrics['active_jobs']}
+
+# HELP flask_completed_jobs_total Total completed jobs
+# TYPE flask_completed_jobs_total counter
+flask_completed_jobs_total {metrics['completed_jobs']}
+
+# HELP flask_failed_jobs_total Total failed jobs
+# TYPE flask_failed_jobs_total counter
+flask_failed_jobs_total {metrics['failed_jobs']}
+
+# HELP flask_uptime_seconds Application uptime in seconds
+# TYPE flask_uptime_seconds counter
+flask_uptime_seconds {time.time() - metrics['start_time']}
+"""
+    
+    return metrics_text, 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

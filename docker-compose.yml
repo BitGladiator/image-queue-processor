@@ -19,7 +19,7 @@ services:
       dockerfile: Dockerfile.flask
     container_name: flask
     ports:
-      - "5001:5000"
+      - "5000:5000"  # Changed from 5001 to 5000 for consistency
     volumes:
       - ./flask/uploads:/app/uploads
       - ./flask/results:/app/results
@@ -41,7 +41,7 @@ services:
       dockerfile: Dockerfile.node
     container_name: node
     ports:
-      - "3001:3000"
+      - "3000:3000"  # Changed from 3001 to 3000 for consistency
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -107,13 +107,17 @@ services:
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
     restart: unless-stopped
+    depends_on:
+      - flask
+      - node
+      - redis-exporter
 
   # Grafana for visualization
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"  # Changed to 3001 to avoid conflict with node service
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
