@@ -72,11 +72,11 @@
     <p>Your image has been successfully processed!</p>
     
     <div class="image-preview">
-      <img src="{{ url_for('results_file', filename=filename) }}" alt="Processed Image" class="result-image">
+      <img src="{{ url_for('download_file', filename=result_file) }}" alt="Processed Image" class="result-image">
     </div>
     
     <div class="actions">
-      <a href="{{ url_for('results_file', filename=filename) }}" download class="btn btn-download">
+      <a href="{{ url_for('download_file', filename=result_file) }}" download class="btn btn-download">
         Download Result
       </a>
       <a href="/" class="btn">

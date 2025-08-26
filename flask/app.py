@@ -69,7 +69,7 @@ def upload_image():
     # Submit job to Node.js queue service
     try:
         response = requests.post(f'{NODE_API_URL}/add-job', json={
-            'imagePath': f'/app/uploads/{unique_filename}',
+            'imagePath': f'/app/flask/uploads/{unique_filename}',
             'filter': filter_type
         })
         
@@ -105,13 +105,16 @@ def status(job_id):
                                      job_id=job_id, 
                                      error=job_status.get('failedReason', 'Unknown error'))
             else:
-                return render_template('status.html', job_id=job_id, status=job_status)
+                # Fix: Pass both status and state to the template
+                return render_template('status.html', 
+                                     job_id=job_id, 
+                                     status=job_status,
+                                     state=job_status.get('state', 'unknown'))
         else:
             return f"Failed to get job status: {response.text}", 500
             
     except requests.RequestException as e:
         return f"Error getting job status: {str(e)}", 500
-
 @app.route('/completed/<job_id>')
 def completed(job_id):
     # Check if result file exists

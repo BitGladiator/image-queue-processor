@@ -12,6 +12,7 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
 
   flask:
     build:
@@ -19,12 +20,13 @@ services:
       dockerfile: Dockerfile.flask
     container_name: flask
     ports:
-      - "5000:5000"  # Changed from 5001 to 5000 for consistency
+      - "5001:5000"  # Use port 5001 to avoid conflicts
     volumes:
       - ./flask/uploads:/app/uploads
       - ./flask/results:/app/results
     environment:
       - NODE_API_URL=http://node:3000
+      - FLASK_ENV=development
     depends_on:
       redis:
         condition: service_healthy
@@ -41,10 +43,11 @@ services:
       dockerfile: Dockerfile.node
     container_name: node
     ports:
-      - "3000:3000"  # Changed from 3001 to 3000 for consistency
+      - "3000:3000"
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - NODE_ENV=development
     depends_on:
       redis:
         condition: service_healthy
@@ -67,16 +70,20 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - NODE_ENV=development
     depends_on:
       redis:
         condition: service_healthy
     volumes:
       - ./flask/results:/app/flask/results
       - ./flask/uploads:/app/flask/uploads
-      # Make sure the processor can access uploaded files
-      - ./flask/uploads:/app/uploads
     command: ["node", "consumer.js"]
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
 
   # Redis exporter for metrics
   redis-exporter:
@@ -117,17 +124,34 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3001:3000"  # Changed to 3001 to avoid conflict with node service
+      - "3001:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
     depends_on:
       - prometheus
     restart: unless-stopped
 
+  # Optional: Nginx reverse proxy for production-like setup
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "8080:80"  # Alternative main entry point
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - flask
+      - node
+    restart: unless-stopped
+    profiles:
+      - production  # Only start with --profile production
+
 volumes:
   prometheus_data:
   grafana_data:
+
