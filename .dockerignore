@@ -1,8 +1,36 @@
+# .dockerignore
+
+# Dependencies
 node_modules
 __pycache__
-*.pyc
+venv
+.env
+
+# Build artifacts
+dist
+build
+*.map
+*.log
+
+# Local Flask data
 flask/uploads
 flask/results
+flask/__pycache__
+
+# C++ build outputs
 cpp/build
 cpp/processor
+
+# Version control
+.git
+.gitignore
+
+# OS / Editor files
 .DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# Docker files not needed inside image
+docker-compose.yml
+README.md

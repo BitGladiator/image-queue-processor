@@ -5,10 +5,17 @@ import uuid
 import time
 import threading
 from datetime import datetime
+from database import (
+    init_db, add_processing_record, update_processing_status,
+    get_all_history, get_history_by_filter, get_history_stats,
+    delete_history_record, clear_old_records
+)
 
 app = Flask(__name__)
 
-# Metrics storage
+
+init_db()
+
 metrics = {
     'requests_total': 0,
     'requests_duration_seconds': [],
@@ -29,17 +36,14 @@ def after_request(response):
     if hasattr(request, 'start_time'):
         duration = time.time() - request.start_time
         metrics['requests_duration_seconds'].append(duration)
-        # Keep only last 1000 requests
         if len(metrics['requests_duration_seconds']) > 1000:
             metrics['requests_duration_seconds'] = metrics['requests_duration_seconds'][-1000:]
     return response
 
-# Configuration
 UPLOAD_FOLDER = 'uploads'
 RESULTS_FOLDER = 'results'
 NODE_API_URL = os.getenv('NODE_API_URL', 'http://node:3000')
 
-# Ensure directories exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
@@ -58,15 +62,13 @@ def upload_image():
     if file.filename == '':
         return redirect(url_for('index'))
     
-    # Generate unique filename
     file_extension = file.filename.rsplit('.', 1)[1].lower()
     unique_filename = f"{uuid.uuid4()}.{file_extension}"
     file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
     
-    # Save uploaded file
+   
     file.save(file_path)
-    
-    # Submit job to Node.js queue service
+
     try:
         response = requests.post(f'{NODE_API_URL}/add-job', json={
             'imagePath': f'/app/flask/uploads/{unique_filename}',
@@ -76,8 +78,22 @@ def upload_image():
         if response.status_code == 200:
             job_data = response.json()
             job_id = job_data['jobId']
-            metrics['active_jobs'] += 1
-            return redirect(url_for('status', job_id=job_id))
+            
+           
+            try:
+                add_processing_record(
+                    job_id=job_id,
+                    original_filename=file.filename,
+                    filter_type=filter_type,
+                    input_path=file_path
+                )
+                
+                metrics['active_jobs'] += 1
+                return redirect(url_for('status', job_id=job_id))
+            except Exception as db_error:
+                print(f"Database error: {db_error}")
+               
+                return redirect(url_for('status', job_id=job_id))
         else:
             metrics['failed_jobs'] += 1
             return f"Failed to queue job: {response.text}", 500
@@ -85,7 +101,6 @@ def upload_image():
     except requests.RequestException as e:
         metrics['failed_jobs'] += 1
         return f"Error communicating with processing service: {str(e)}", 500
-
 @app.route('/status/<job_id>')
 def status(job_id):
     try:
@@ -95,17 +110,25 @@ def status(job_id):
             job_status = response.json()
             
             if job_status['state'] == 'completed':
+         
+                result_file = f"{job_id}_output.jpg"
+                output_path = os.path.join(RESULTS_FOLDER, result_file)
+                update_processing_status(job_id, 'completed', output_path)
+                
                 metrics['active_jobs'] = max(0, metrics['active_jobs'] - 1)
                 metrics['completed_jobs'] += 1
                 return redirect(url_for('completed', job_id=job_id))
             elif job_status['state'] == 'failed':
+               
+                error_msg = job_status.get('failedReason', 'Unknown error')
+                update_processing_status(job_id, 'failed', error_message=error_msg)
+                
                 metrics['active_jobs'] = max(0, metrics['active_jobs'] - 1)
                 metrics['failed_jobs'] += 1
                 return render_template('failed.html', 
                                      job_id=job_id, 
-                                     error=job_status.get('failedReason', 'Unknown error'))
+                                     error=error_msg)
             else:
-                # Fix: Pass both status and state to the template
                 return render_template('status.html', 
                                      job_id=job_id, 
                                      status=job_status,
@@ -115,9 +138,9 @@ def status(job_id):
             
     except requests.RequestException as e:
         return f"Error getting job status: {str(e)}", 500
+
 @app.route('/completed/<job_id>')
 def completed(job_id):
-    # Check if result file exists
     result_file = f"{job_id}_output.jpg"
     result_path = os.path.join(RESULTS_FOLDER, result_file)
     
@@ -132,6 +155,63 @@ def completed(job_id):
 def download_file(filename):
     return send_from_directory(RESULTS_FOLDER, filename)
 
+@app.route('/history')
+def history():
+    """Display processing history"""
+    page = request.args.get('page', 1, type=int)
+    filter_type = request.args.get('filter', None)
+    limit = 20
+    offset = (page - 1) * limit
+    
+    if filter_type:
+        records = get_history_by_filter(filter_type, limit)
+    else:
+        records = get_all_history(limit, offset)
+    
+    stats = get_history_stats()
+    
+    return render_template('history.html', 
+                         records=records, 
+                         stats=stats,
+                         page=page,
+                         filter_type=filter_type)
+
+@app.route('/history/api')
+def history_api():
+  
+    limit = request.args.get('limit', 50, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    filter_type = request.args.get('filter', None)
+    
+    if filter_type:
+        records = get_history_by_filter(filter_type, limit)
+    else:
+        records = get_all_history(limit, offset)
+    
+    return jsonify(records)
+
+@app.route('/history/stats')
+def history_stats():
+  
+    stats = get_history_stats()
+    return jsonify(stats)
+
+@app.route('/history/delete/<job_id>', methods=['POST'])
+def delete_history(job_id):
+   
+    success = delete_history_record(job_id)
+    if success:
+        return jsonify({'success': True, 'message': 'Record deleted'})
+    else:
+        return jsonify({'success': False, 'message': 'Record not found'}), 404
+
+@app.route('/history/clear', methods=['POST'])
+def clear_history():
+   
+    days = request.json.get('days', 30)
+    count = clear_old_records(days)
+    return jsonify({'success': True, 'deleted': count})
+
 @app.route('/health')
 def health():
     return jsonify({
@@ -142,8 +222,7 @@ def health():
 
 @app.route('/metrics')
 def prometheus_metrics():
-    """Prometheus metrics endpoint - minimal version without system metrics"""
-    # Calculate average request duration
+   
     avg_duration = 0
     if metrics['requests_duration_seconds']:
         avg_duration = sum(metrics['requests_duration_seconds']) / len(metrics['requests_duration_seconds'])

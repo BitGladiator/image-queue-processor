@@ -2,7 +2,7 @@ FROM node:18
 
 WORKDIR /app
 
-# Install OpenCV deps, curl for health checks, and build tools first
+
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -11,25 +11,35 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js dependencies
+
 COPY node/package.json node/package-lock.json* ./
 RUN npm install
 
-# Copy Node.js code
 COPY node/ .
 
-# Copy and build C++ processor
+
 COPY cpp/ ./cpp/
+
+
 WORKDIR /app/cpp
-RUN mkdir -p build && cd build && cmake .. && make
+RUN echo "=== Fixing OpenCV include typo ===" && \
+    sed -i 's/opencv2\/opewncv.hpp/opencv2\/opencv.hpp/g' processor.cpp && \
+    echo "=== Building processor ===" && \
+    rm -rf build && \
+    mkdir -p build && \
+    cd build && \
+    cmake .. && \
+    make
 
-# Verify the processor was built
-RUN ls -la /app/cpp/build/ && file /app/cpp/build/processor
-
-# Create necessary directories
-RUN mkdir -p /app/flask/results /app/flask/uploads
+RUN echo "=== Build verification ===" && \
+    ls -la build/ && \
+    file build/processor && \
+    echo "C++ processor built successfully!"
 
 WORKDIR /app
+
+
+RUN mkdir -p /app/flask/results /app/flask/uploads
 
 EXPOSE 3000
 
