@@ -36,19 +36,19 @@ graph TB
 
 ##  **VISUAL SHOWCASE**
 
-### ** SLEEK UPLOAD INTERFACE**
+### **SLEEK UPLOAD INTERFACE**
 *Intuitive drag-and-drop with real-time filter preview*
 
 ![Upload Interface](./refimages/ScreenShot1.png)
 
-### ** INSTANT RESULTS DELIVERY**
+### **INSTANT RESULTS DELIVERY**
 *Lightning-fast processing with elegant result display*
 
 ![Results Display](./refimages/Screenshot2.png)
 
 ---
 
-##  **CUTTING-EDGE TECH ARSENAL**
+## **CUTTING-EDGE TECH ARSENAL**
 
 <div align="center">
 
