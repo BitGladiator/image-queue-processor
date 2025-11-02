@@ -281,7 +281,7 @@ We welcome contributions from the community! Here's how to get involved:
 -  Documentation enhancements
 -  Test coverage expansion
 
-### ** Contribution Process**
+### **Contribution Process**
 1.  Fork the repository
 2.  Create a feature branch
 3.  Make your improvements
