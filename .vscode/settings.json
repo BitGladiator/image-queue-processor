@@ -2,5 +2,6 @@
     "files.associations": {
         "*.dbclient-js": "javascript",
         "iostream": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/Users/karansharma/Desktop/CPP MiniProjects/image-queue-processor/cpp"
 }

@@ -11,8 +11,9 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
+      padding: 20px;
     }
 
     .container {
@@ -72,6 +73,62 @@
       font-size: 13px;
       color: #555;
     }
+
+    /* Intensity slider styles */
+    .intensity-slider {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #ddd;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #4CAF50;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #4CAF50;
+      cursor: pointer;
+      border: none;
+    }
+
+    .intensity-value {
+      display: inline-block;
+      margin-left: 10px;
+      font-weight: bold;
+      color: #4CAF50;
+      min-width: 30px;
+    }
+
+    .intensity-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .filter-description {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -96,6 +153,16 @@
           <option value="negative">Negative</option>
           <option value="brighten">Brighten</option>
         </select>
+        <div class="filter-description" id="filter-description"></div>
+      </div>
+
+      <div class="form-group">
+        <div class="intensity-header">
+          <label for="intensity">Filter Intensity:</label>
+          <span class="intensity-value" id="intensity-display">50%</span>
+        </div>
+        <input type="range" name="intensity" id="intensity" class="intensity-slider" 
+               min="0" max="100" value="50" step="1">
       </div>
 
       <button type="submit">Upload & Process</button>
@@ -105,7 +172,20 @@
   <script>
     const fileInput = document.getElementById('image');
     const fileName = document.getElementById('file-name');
-
+    const filterSelect = document.getElementById('filter');
+    const intensitySlider = document.getElementById('intensity');
+    const intensityDisplay = document.getElementById('intensity-display');
+    const filterDescription = document.getElementById('filter-description');
+    const descriptions = {
+      grayscale: "Intensity controls the blend between original and grayscale",
+      blur: "Higher intensity = more blur (kernel size)",
+      edge: "Intensity controls edge detection threshold",
+      sharpen: "Higher intensity = stronger sharpening effect",
+      emboss: "Intensity controls the emboss depth",
+      sepia: "Intensity controls the sepia tone strength",
+      negative: "Intensity controls the inversion amount",
+      brighten: "Higher intensity = brighter image"
+    };
     fileInput.addEventListener('change', function() {
       if (this.files.length > 0) {
         fileName.textContent = "Selected: " + this.files[0].name;
@@ -113,6 +193,13 @@
         fileName.textContent = "";
       }
     });
+    intensitySlider.addEventListener('input', function() {
+      intensityDisplay.textContent = this.value + '%';
+    });
+    filterSelect.addEventListener('change', function() {
+      filterDescription.textContent = descriptions[this.value] || '';
+    });
+    filterDescription.textContent = descriptions[filterSelect.value];
   </script>
 </body>
 </html>

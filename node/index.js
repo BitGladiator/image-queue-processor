@@ -1,2 +1,2 @@
-require('./app');      // starts express server
-require('./consumer'); // starts BullMQ worker
+require('./app');     
+require('./consumer'); 

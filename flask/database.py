@@ -16,6 +16,7 @@ def init_db():
             job_id TEXT UNIQUE NOT NULL,
             original_filename TEXT NOT NULL,
             filter_type TEXT NOT NULL,
+            intensity INTEGER DEFAULT 50,
             status TEXT NOT NULL,
             input_path TEXT NOT NULL,
             output_path TEXT,
@@ -48,14 +49,14 @@ def get_db():
         conn.close()
 
 def add_processing_record(job_id, original_filename, filter_type, input_path):
-    with get_db() as conn:
+      with get_db() as conn:
         cursor = conn.cursor()
         try:
             cursor.execute('''
                 INSERT INTO processing_history 
-                (job_id, original_filename, filter_type, status, input_path)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (job_id, original_filename, filter_type, 'pending', input_path))
+                (job_id, original_filename, filter_type, intensity, status, input_path)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (job_id, original_filename, filter_type, intensity, 'pending', input_path))
             conn.commit()
             return cursor.lastrowid
         except sqlite3.IntegrityError:

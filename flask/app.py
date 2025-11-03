@@ -25,7 +25,6 @@ metrics = {
     'start_time': time.time()
 }
 
-# Middleware to track metrics
 @app.before_request
 def before_request():
     request.start_time = time.time()
@@ -58,6 +57,7 @@ def upload_image():
     
     file = request.files['image']
     filter_type = request.form.get('filter', 'grayscale')
+    intensity = request.form.get('intensity', '50') 
     
     if file.filename == '':
         return redirect(url_for('index'))
@@ -66,13 +66,13 @@ def upload_image():
     unique_filename = f"{uuid.uuid4()}.{file_extension}"
     file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
     
-   
     file.save(file_path)
 
     try:
         response = requests.post(f'{NODE_API_URL}/add-job', json={
             'imagePath': f'/app/flask/uploads/{unique_filename}',
-            'filter': filter_type
+            'filter': filter_type,
+            'intensity': int(intensity) 
         })
         
         if response.status_code == 200:
@@ -82,10 +82,11 @@ def upload_image():
            
             try:
                 add_processing_record(
-                    job_id=job_id,
-                    original_filename=file.filename,
-                    filter_type=filter_type,
-                    input_path=file_path
+                   job_id=job_id,
+                   original_filename=file.filename,
+                   filter_type=filter_type,
+                   input_path=file_path,
+                   intensity=int(intensity)  
                 )
                 
                 metrics['active_jobs'] += 1

@@ -1,12 +1,11 @@
 #!/bin/bash
 
-echo "🔧 Fixing Prometheus monitoring setup..."
+echo "Fixing Prometheus monitoring setup..."
 
-# Stop current containers
 echo "Stopping current containers..."
 docker-compose down
 
-# Update the monitoring configuration
+
 echo "Updating Prometheus configuration..."
 cat > monitoring/prometheus.yml << EOF
 global:
@@ -38,7 +37,7 @@ scrape_configs:
     scrape_interval: 30s
 EOF
 
-# Update Flask requirements
+
 echo "Updating Flask requirements..."
 cat > flask/requirements.txt << EOF
 Flask==2.3.2

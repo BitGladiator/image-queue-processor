@@ -1,17 +1,13 @@
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-
-// Test the C++ processor
 const processorPath = path.join(__dirname, 'cpp/build/processor');
-const testInput = '/app/flask/uploads/badge.png';  // Adjust this path
+const testInput = '/app/flask/uploads/badge.png'; 
 const testOutput = '/app/flask/results/test_output.jpg';
 
 console.log('Testing C++ processor...');
 console.log(`Processor path: ${processorPath}`);
 console.log(`Processor exists: ${fs.existsSync(processorPath)}`);
-
-// Ensure output directory exists
 const outputDir = path.dirname(testOutput);
 if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
