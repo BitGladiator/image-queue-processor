@@ -3,166 +3,98 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Image Processor</title>
+  <title>Simple Image Processor</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f9;
+      background: #f8f9fa;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      height: 100vh;
       margin: 0;
-      padding: 20px;
     }
 
-    .container {
+    .box {
       background: white;
       padding: 20px;
       border-radius: 8px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 350px;
     }
 
-    h1 {
+    h2 {
       text-align: center;
       margin-bottom: 20px;
       font-size: 20px;
       color: #333;
     }
 
-    .form-group {
-      margin-bottom: 15px;
-    }
-
     label {
       display: block;
       margin-bottom: 6px;
       font-size: 14px;
-      color: #333;
     }
 
-    input[type="file"], select, button {
+    input, select, button {
       width: 100%;
-      padding: 10px;
-      font-size: 14px;
+      margin-bottom: 15px;
+      padding: 8px;
+      border-radius: 5px;
       border: 1px solid #ccc;
-      border-radius: 6px;
-      outline: none;
-    }
-
-    input[type="file"] {
-      padding: 6px;
+      font-size: 14px;
     }
 
     button {
       background: #4CAF50;
       color: white;
-      font-weight: bold;
-      cursor: pointer;
       border: none;
+      cursor: pointer;
     }
 
     button:hover {
       background: #45a049;
     }
 
-    #file-name {
-      margin-top: 6px;
-      font-size: 13px;
-      color: #555;
+    .range-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    /* Intensity slider styles */
-    .intensity-slider {
-      width: 100%;
-      margin-top: 8px;
+    #intensity {
+      width: 80%;
     }
 
-    input[type="range"] {
-      width: 100%;
-      height: 6px;
-      border-radius: 3px;
-      background: #ddd;
-      outline: none;
-      -webkit-appearance: none;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #4CAF50;
-      cursor: pointer;
-    }
-
-    input[type="range"]::-moz-range-thumb {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #4CAF50;
-      cursor: pointer;
-      border: none;
-    }
-
-    .intensity-value {
-      display: inline-block;
-      margin-left: 10px;
+    #intensity-value {
       font-weight: bold;
       color: #4CAF50;
-      min-width: 30px;
-    }
-
-    .intensity-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-
-    .filter-description {
-      font-size: 12px;
-      color: #666;
-      margin-top: 4px;
-      font-style: italic;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Upload Image</h1>
+  <div class="box">
+    <h2>Image Processor</h2>
     <form action="/upload" method="POST" enctype="multipart/form-data">
-      <div class="form-group">
-        <label for="image">Choose image:</label>
-        <input type="file" name="image" id="image" accept="image/*" required>
-        <div id="file-name"></div>
-      </div>
+      <label for="image">Choose Image:</label>
+      <input type="file" name="image" id="image" accept="image/*" required>
 
-      <div class="form-group">
-        <label for="filter">Choose a filter:</label>
-        <select name="filter" id="filter">
-          <option value="grayscale">Grayscale</option>
-          <option value="blur">Blur</option>
-          <option value="edge">Edge Detection</option>
-          <option value="sharpen">Sharpen</option>
-          <option value="emboss">Emboss</option>
-          <option value="sepia">Sepia</option>
-          <option value="negative">Negative</option>
-          <option value="brighten">Brighten</option>
-        </select>
-        <div class="filter-description" id="filter-description"></div>
-      </div>
+      <label for="filter">Select Filter:</label>
+      <select name="filter" id="filter">
+        <option value="grayscale">Grayscale</option>
+        <option value="blur">Blur</option>
+        <option value="edge">Edge Detection</option>
+        <option value="sharpen">Sharpen</option>
+        <option value="sepia">Sepia</option>
+        <option value="negative">Negative</option>
+        <option value="brighten">Brighten</option>
+      </select>
 
-      <div class="form-group">
-        <div class="intensity-header">
-          <label for="intensity">Filter Intensity:</label>
-          <span class="intensity-value" id="intensity-display">50%</span>
-        </div>
-        <input type="range" name="intensity" id="intensity" class="intensity-slider" 
-               min="0" max="100" value="50" step="1">
+      <label>Intensity:</label>
+      <div class="range-container">
+        <input type="range" name="intensity" id="intensity" min="0" max="100" value="50">
+        <span id="intensity-value">50%</span>
       </div>
 
       <button type="submit">Upload & Process</button>
@@ -170,36 +102,11 @@
   </div>
 
   <script>
-    const fileInput = document.getElementById('image');
-    const fileName = document.getElementById('file-name');
-    const filterSelect = document.getElementById('filter');
-    const intensitySlider = document.getElementById('intensity');
-    const intensityDisplay = document.getElementById('intensity-display');
-    const filterDescription = document.getElementById('filter-description');
-    const descriptions = {
-      grayscale: "Intensity controls the blend between original and grayscale",
-      blur: "Higher intensity = more blur (kernel size)",
-      edge: "Intensity controls edge detection threshold",
-      sharpen: "Higher intensity = stronger sharpening effect",
-      emboss: "Intensity controls the emboss depth",
-      sepia: "Intensity controls the sepia tone strength",
-      negative: "Intensity controls the inversion amount",
-      brighten: "Higher intensity = brighter image"
-    };
-    fileInput.addEventListener('change', function() {
-      if (this.files.length > 0) {
-        fileName.textContent = "Selected: " + this.files[0].name;
-      } else {
-        fileName.textContent = "";
-      }
+    const intensity = document.getElementById('intensity');
+    const display = document.getElementById('intensity-value');
+    intensity.addEventListener('input', () => {
+      display.textContent = intensity.value + '%';
     });
-    intensitySlider.addEventListener('input', function() {
-      intensityDisplay.textContent = this.value + '%';
-    });
-    filterSelect.addEventListener('change', function() {
-      filterDescription.textContent = descriptions[this.value] || '';
-    });
-    filterDescription.textContent = descriptions[filterSelect.value];
   </script>
 </body>
 </html>
